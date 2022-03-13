@@ -7,8 +7,9 @@ __exit signals that is is only run once when the module is removed.
 static means that the function is not visible ouside of this file.
 */
 
-// This stuff should go in the .h file
-
+dev_t dev = 0;                  // Holds dev ice numbers
+static struct class *dev_class;
+static struct cdev hcsr04_cdev; // Character device
 
 static int __init hcsr04_init(void);
 static void __exit hcsr04_exit(void);
