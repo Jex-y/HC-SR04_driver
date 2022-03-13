@@ -8,6 +8,7 @@
 #include <linux/delay.h>
 #include <linux/uaccess.h>
 #include <linux/gpio.h>
+#include <linux/timer.h>
 
 #include "driver.h"
 
@@ -57,21 +58,42 @@ ssize_t hcsr04_read(
     }
 
     // ktime_t timeout = ktime_us
-    // const timeout_cyles = get_cycles()
 
     // Send trugger pulse
     gpio_set_value(trig_pin, 1);
     udelay(TRIGGER_HIGH_TIME_uS);
     gpio_set_value(trig_pin, 0);
 
+    // Pulse round trip is a maximum of 8 meters
+    // 8 pulses are required
+    // Add a 10% margin for error just in case
+
+    // This waiting is blocking but seems like the most accurate way
+
+    long timeout_us = ((8 * 8 * 1e6) / SPEED_OF_SOUND_M_S) * 1.1;
+
+    ktime_t timeout = ktime_add_us(ktime_get(), timeout_us);
+
+    // Look at timers maybe
+
     ktime_t start, finish;
-    while (!gpio_get_value(echo_pin)) {}
+    while (!gpio_get_value(echo_pin)) {
+        if (ktime_compare(ktime_get(), timeout) >= 0) {
+            goto timeout;
+        }
+    }
     start = ktime_get();
     while (gpio_get_value(echo_pin)) {}
     finish = ktime_get();
-    s64 elapsed_us = ktime_us_delta(finish - start));
+    s64 elapsed_us = ktime_us_delta(finish, start);
 
-    pr_info("Read the sensor, got a round trip time of %lluus\n", (unsigned long)elapsed_us);
+    pr_info("Read the sensor, got a total round trip time of %lu us\n", (unsigned long)elapsed_us);
+
+    length = sizeof(s64);
+
+    if ( copy_to_user(buffer, &elapsed_us, length) > 0 ) {
+        pr_err("Error copying elapsed time to user\n");
+    }
 
     return 0;
 
@@ -151,6 +173,7 @@ ssize_t hcsr04_write(
 // Note: Look at add_timer, init_timer, del_tiner
 int __init hcsr04_init(void)
 {
+    if((alloc_chrdev_region(&dev)))
     return 0;
 }
 
