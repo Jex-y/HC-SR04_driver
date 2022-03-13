@@ -72,11 +72,12 @@ ssize_t hcsr04_read(
 
     // Pulse round trip is a maximum of 8 meters
     // 8 pulses are required
-    // Add a 10% margin for error just in case
+    // Add a 200% margin for error just in case and because it doesn't
+    // work without it.
 
     // This waiting is blocking but seems like the most accurate way
 
-    timeout_us = ((8 * 8 * 1e6) / SPEED_OF_SOUND_M_S) * 1.1;
+    timeout_us = ((8 * 8 * 1e6) / SPEED_OF_SOUND_M_S) * 2;
 
     timeout = ktime_add_us(ktime_get(), timeout_us);
 
@@ -98,6 +99,7 @@ ssize_t hcsr04_read(
 
     pr_info("Read the sensor, got a total round trip time of %lu us\n", (unsigned long)elapsed_us);
 
+
     length = sizeof(s64);
 
     if (copy_to_user(buffer, &elapsed_us, length) > 0)
@@ -108,7 +110,7 @@ ssize_t hcsr04_read(
     return 0;
 
 timeout:
-    pr_err("Timeout reading the senor, no object detected\n");
+    pr_err("Timeout reading the sensor, no object detected\n");
     // output something
     return 0;
 }
@@ -127,8 +129,8 @@ ssize_t hcsr04_write(
     size_t length, loff_t *offset)
 {
     uint8_t internal_buffer[MAX_BUFFER_LENGTH];
-    char pin_type[3];
-    char pin_no_str[5];
+    char pin_type[5];
+    char pin_no_str[3];
     long pin_no;
 
     pr_info("Attempting to change GPIO pins\n");
@@ -139,8 +141,8 @@ ssize_t hcsr04_write(
     }
 
     memset(internal_buffer, 0, MAX_BUFFER_LENGTH);
-    memset(pin_type, 0, 3);
-    memset(pin_no_str, 0, 5);
+    memset(pin_type, 0, 5);
+    memset(pin_no_str, 0, 3);
     // copy_from_user returns the number of bytes that were unable to
     // be copied,
     if (copy_from_user(internal_buffer, buffer, length))
@@ -148,7 +150,6 @@ ssize_t hcsr04_write(
         pr_err("Error whilst copying data from user\n");
         return length;
     }
-    pr_info("%s", internal_buffer);
     memcpy(pin_type, internal_buffer, 4);
     memcpy(pin_no_str, internal_buffer + 5, 2);
     
@@ -187,6 +188,7 @@ ssize_t hcsr04_write(
     else
     {
         pr_err("Error whist parsing input, Expecting input of the form '<ECHO/TRIG> <GPIO pin>'\n");
+        pr_err("Got %s %ld\n", pin_type, pin_no);
         return length;
     }
 
