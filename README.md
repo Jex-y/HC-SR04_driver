@@ -11,15 +11,9 @@ sudo insmod driver.ko
 
 ## Usage
 
-The GPIO pins can be set as such:
-```
-echo "TRIG 12" > /dev/hcsr04
-echo "ECHO 14" > /dev/hcsr04
-```
-And the round trip time in microseconds (represented in bytes) can be read by
-```
-cat /dev/hcsr04_device
-```
+The device created is `/dev/hcsr04`
+
+The GPIO pins can be set by writing to the device file and the round trip time in microseconds (as the bytes of an unsigned long) can be read from this file.
 
 ## Example
 
