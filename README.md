@@ -13,8 +13,8 @@ sudo insmod driver.ko
 
 The GPIO pins can be set as such:
 ```
-echo "TRIG 12" > /dev/hcsr04_device
-echo "ECHO 14" > /dev/hcsr04_device
+echo "TRIG 12" > /dev/hcsr04
+echo "ECHO 14" > /dev/hcsr04
 ```
 And the round trip time in microseconds (represented in bytes) can be read by
 ```
@@ -27,11 +27,11 @@ cat /dev/hcsr04_device
 ECHO_PIN = 3
 TRIG_PIN = 2
 
-with open('/dev/hcsr04_device', 'w') as file:
+with open('/dev/hcsr04', 'w') as file:
     file.write(f'ECHO {ECHO_PIN:02d}')
     file.write(f'TRIG {TRIG_PIN:02d}')
 
-with open('/dev/hcsr04_device', 'rb') as file:
+with open('/dev/hcsr04', 'rb') as file:
     data = file.read()
 
 trip = int.from_bytes(data, 'little')

@@ -13,8 +13,8 @@
 #include "driver.h"
 
 #define DRIVER_AUTHOR "Edward Jex <edward.j.jex@durham.ac.uk>"
-#define DRIVER_DECSRIPTION "A driver to read the HC-SR04 sensor easily"
-#define DRIVER_VERSION "0.1.0"
+#define DRIVER_DECSRIPTION "A driver to read the HC-SR04 sensor.\nWriting to the device file using the format <ECHO/TRIG> <GPIO PIN (2 digits)> can be used to change the pin settings.\nReading from the device file returns the bytes of an unsigned long containg the time in microseconds for a single roundtrip."
+#define DRIVER_VERSION "1.0.0"
 
 #define MAX_BUFFER_LENGTH 7
 #define TRIGGER_HIGH_TIME_uS 10
@@ -236,7 +236,7 @@ int __init hcsr04_init(void)
         goto failed_create_class;
     }
 
-    if (!device_create(dev_class, NULL, dev, NULL, "hcsr04_device"))
+    if (!device_create(dev_class, NULL, dev, NULL, "hcsr04"))
     {
         pr_err("Failed to create the device\n");
         goto failed_create_device;
