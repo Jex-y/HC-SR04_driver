@@ -6,7 +6,7 @@ This driver is designed to make reading the distance from the senor as simple as
 ```
 sudo apt install raspberrypi-kernel-headers
 make
-sudo insmod driver.ko
+sudo insmod hcsr04_driver.ko
 ```
 
 ## Usage
