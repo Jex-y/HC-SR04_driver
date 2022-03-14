@@ -16,7 +16,7 @@
 #define DRIVER_DECSRIPTION "A driver to read the HC-SR04 sensor easily"
 #define DRIVER_VERSION "0.1.0"
 
-#define MAX_BUFFER_LENGTH 8
+#define MAX_BUFFER_LENGTH 7
 #define TRIGGER_HIGH_TIME_uS 10
 #define SPEED_OF_SOUND_M_S 343
 
@@ -51,9 +51,13 @@ ssize_t hcsr04_read(
     size_t length, loff_t *offset)
 {
     long timeout_us;
-    s64 elapsed_us;
+    unsigned long elapsed_us;
 
     ktime_t timeout, start, finish;
+
+    if (*offset) {
+        return 0;
+    }
 
     pr_info("Attempting to read sensor\n");
 
@@ -87,6 +91,8 @@ ssize_t hcsr04_read(
     {
         if (ktime_compare(ktime_get(), timeout) >= 0)
         {
+            elapsed_us = ULONG_MAX;
+            pr_err("Timeout reading the sensor, no object detected\n");
             goto timeout;
         }
     }
@@ -94,25 +100,22 @@ ssize_t hcsr04_read(
     while (gpio_get_value(echo_pin))
     {
     }
+
+
     finish = ktime_get();
-    elapsed_us = ktime_us_delta(finish, start);
+    elapsed_us = (unsigned long)ktime_us_delta(finish, start);
 
-    pr_info("Read the sensor, got a total round trip time of %lu us\n", (unsigned long)elapsed_us);
+    pr_info("Read the sensor, got a total round trip time of %lu us\n", elapsed_us);
+timeout:
+    length = sizeof(unsigned long);
 
-
-    length = sizeof(s64);
-
-    if (copy_to_user(buffer, &elapsed_us, length) > 0)
+    if (copy_to_user(buffer, &elapsed_us, length))
     {
         pr_err("Error copying elapsed time to user\n");
     }
 
-    return 0;
-
-timeout:
-    pr_err("Timeout reading the sensor, no object detected\n");
-    // output something
-    return 0;
+    *offset += length;
+    return length;
 }
 
 /*
@@ -132,37 +135,47 @@ ssize_t hcsr04_write(
     char pin_type[5];
     char pin_no_str[3];
     long pin_no;
+    size_t written;
 
     pr_info("Attempting to change GPIO pins\n");
-    if (length > MAX_BUFFER_LENGTH)
-    {
-        pr_err(
-            "Data passed to driver was too large for the buffer. Expecting input of the form '<ECHO/TRIG> <GPIO pin>'\n");
+    // if (length > MAX_BUFFER_LENGTH)
+    // {
+    //     pr_err(
+    //         "Data passed to driver was too large for the buffer. Expecting input of the form '<ECHO/TRIG> <GPIO pin>'\n");
+    // }
+
+    if (length < MAX_BUFFER_LENGTH) {
+        written = length;
+    } else {
+        written = MAX_BUFFER_LENGTH;
     }
 
     memset(internal_buffer, 0, MAX_BUFFER_LENGTH);
     memset(pin_type, 0, 5);
     memset(pin_no_str, 0, 3);
     // copy_from_user returns the number of bytes that were unable to
-    // be copied,
-    if (copy_from_user(internal_buffer, buffer, length))
+    // be copied
+    
+    if (copy_from_user(internal_buffer, buffer, MAX_BUFFER_LENGTH))
     {
-        pr_err("Error whilst copying data from user\n");
-        return length;
+        pr_err("No all bytes were copied from user\n");
     }
+
+    pr_info("%s", internal_buffer);
+
     memcpy(pin_type, internal_buffer, 4);
     memcpy(pin_no_str, internal_buffer + 5, 2);
-    
+
     if (kstrtol(pin_no_str, 10, &pin_no))
     {
-        pr_err("Error whist parsing input, GPIO pin is not a number'\n");
-        return length;
+        pr_err("Error whist parsing input, GPIO pin should be a number, got %s\n", pin_no_str);
+        return written;
     }
 
     if (!gpio_is_valid(pin_no))
     {
         pr_err("Error whist parsing input, GPIO pin is invalid'\n");
-        return length;
+        return written;
     }
 
     if (!strcasecmp(pin_type, "ECHO"))
@@ -170,7 +183,7 @@ ssize_t hcsr04_write(
         if (gpio_request(pin_no, "ECHO_PIN") || gpio_direction_input(pin_no))
         {
             pr_err("Error when requesting GPIO pin");
-            return length;
+            return written;
         }
         echo_pin = pin_no;
         pr_info("Echo has been set to GPIO pin %d\n", echo_pin);
@@ -180,7 +193,7 @@ ssize_t hcsr04_write(
         if (gpio_request(pin_no, "TRIG_PIN") || gpio_direction_output(pin_no, 0))
         {
             pr_err("Error when requesting GPIO pin");
-            return length;
+            return written;
         }
         trig_pin = pin_no;
         pr_info("Trigger has been set to GPIO pin %d\n", trig_pin);
@@ -189,10 +202,10 @@ ssize_t hcsr04_write(
     {
         pr_err("Error whist parsing input, Expecting input of the form '<ECHO/TRIG> <GPIO pin>'\n");
         pr_err("Got %s %ld\n", pin_type, pin_no);
-        return length;
+        return written;
     }
 
-    return length;
+    return written;
 }
 
 // Note: Look at add_timer, init_timer, del_tiner
@@ -217,12 +230,14 @@ int __init hcsr04_init(void)
 
     dev_class = class_create(THIS_MODULE, "hcsr04_class");
 
-    if (!dev_class) {
+    if (!dev_class)
+    {
         pr_err("Failed to create the device class\n");
         goto failed_create_class;
     }
 
-    if (!device_create(dev_class, NULL, dev, NULL, "hcsr04_device")) {
+    if (!device_create(dev_class, NULL, dev, NULL, "hcsr04_device"))
+    {
         pr_err("Failed to create the device\n");
         goto failed_create_device;
     }
@@ -246,11 +261,13 @@ failed_allocate_dev_numbers:
 
 void __exit hcsr04_exit(void)
 {
-    if (trig_pin < 100) {
+    if (trig_pin < 100)
+    {
         gpio_free(trig_pin);
     }
 
-    if (echo_pin < 100) {
+    if (echo_pin < 100)
+    {
         gpio_free(echo_pin);
     }
 
