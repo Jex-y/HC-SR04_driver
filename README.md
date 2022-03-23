@@ -4,6 +4,8 @@ This driver is designed to make reading the distance from the senor as simple as
 ## Build Instructions
 
 ```
+git clone https://github.com/Jex-y/HC-SR04_driver
+cd HC-SR04_driver
 sudo apt install raspberrypi-kernel-headers
 make
 sudo insmod hcsr04_driver.ko
