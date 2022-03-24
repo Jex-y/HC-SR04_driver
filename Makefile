@@ -1,4 +1,4 @@
-obj-m += hcsr04_driver.o
+obj-m += hcsr04_sensor.o
 
 KERNALDIR = /lib/modules/$(shell uname -r)/build
 

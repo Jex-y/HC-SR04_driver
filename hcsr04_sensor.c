@@ -10,7 +10,7 @@
 #include <linux/gpio.h>
 #include <linux/timer.h>
 
-#include "driver.h"
+#include "hcsr04_sensor.h"
 
 #define DRIVER_AUTHOR "Edward Jex <edward.j.jex@durham.ac.uk>"
 #define DRIVER_DECSRIPTION "A driver to read the HC-SR04 sensor.\nWriting to the device file using the format <ECHO/TRIG> <GPIO PIN (2 digits)> can be used to change the pin settings.\nReading from the device file returns the bytes of an unsigned long containg the time in microseconds for a single roundtrip."

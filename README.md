@@ -8,9 +8,21 @@ git clone https://github.com/Jex-y/HC-SR04_driver
 cd HC-SR04_driver
 sudo apt install raspberrypi-kernel-headers
 make
-sudo insmod hcsr04_driver.ko
+sudo insmod hcsr04_sensor.ko
 ```
 
+To immediately load the module run:
+```bash
+sudo insmod hcsr04_sensor.ko
+```
+Note that this means that the driver will be removed on reboot.
+To load it on boot:
+```bash
+sudo mkdir -p /lib/modules/$(uname -r)/kernel/drivers/sensors
+sudo cp hcsr04_sensor.ko /lib/modules/$(uname -r)/kernel/drivers/sensors
+sudo depmod
+```
+and add the line `hcsr04_sensor` to `/etc/modules`
 ## Usage
 
 The device created is `/dev/hcsr04`
