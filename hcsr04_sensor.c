@@ -81,12 +81,12 @@ ssize_t hcsr04_read(
 
     // This waiting is blocking but seems like the most accurate way
 
-    timeout_us = ((8 * 8 * 1e6) / SPEED_OF_SOUND_M_S) * 2;
+    timeout_us = 1e9;
 
     timeout = ktime_add_us(ktime_get(), timeout_us);
 
     // Look at timers maybe
-
+    pr_info("Waiting for pin to go high");
     while (!gpio_get_value(echo_pin))
     {
         if (ktime_compare(ktime_get(), timeout) >= 0)
@@ -99,6 +99,12 @@ ssize_t hcsr04_read(
     start = ktime_get();
     while (gpio_get_value(echo_pin))
     {
+        if (ktime_compare(ktime_get(), timeout) >= 0)
+        {
+            elapsed_us = ULONG_MAX;
+            pr_err("Timeout reading the sensor, no object detected\n");
+            goto timeout;
+        }
     }
 
 
@@ -161,8 +167,6 @@ ssize_t hcsr04_write(
         pr_err("No all bytes were copied from user\n");
     }
 
-    pr_info("%s", internal_buffer);
-
     memcpy(pin_type, internal_buffer, 4);
     memcpy(pin_no_str, internal_buffer + 5, 2);
 
@@ -180,6 +184,10 @@ ssize_t hcsr04_write(
 
     if (!strcasecmp(pin_type, "ECHO"))
     {
+        if (echo_pin == pin_no) {
+            pr_info("Echo pin already set to %d\n", echo_pin);
+            return written;
+        }
         if (gpio_request(pin_no, "ECHO_PIN") || gpio_direction_input(pin_no))
         {
             pr_err("Error when requesting GPIO pin");
@@ -190,6 +198,10 @@ ssize_t hcsr04_write(
     }
     else if (!strcasecmp(pin_type, "TRIG"))
     {
+        if (trig_pin == pin_no) {
+            pr_info("Trig pin already set to %d\n", trig_pin);
+            return written;
+        }
         if (gpio_request(pin_no, "TRIG_PIN") || gpio_direction_output(pin_no, 0))
         {
             pr_err("Error when requesting GPIO pin");
